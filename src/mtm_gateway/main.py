@@ -13,7 +13,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from mtm_gateway.app import create_app
 from mtm_gateway.config import get_settings
-from mtm_gateway.models import SignalState
 from mtm_gateway.services import backtest_client
 from mtm_gateway.services.fcm import send_signal_to_tokens
 from mtm_gateway.services.laconic_registry import query_records
@@ -98,9 +97,7 @@ async def startup() -> None:
         id="signal_push_cycle",
     )
     scheduler.start()
-    logger.info(
-        "Signal push scheduler started (every %dh)", settings.signal_cycle_interval_hours
-    )
+    logger.info("Signal push scheduler started (every %dh)", settings.signal_cycle_interval_hours)
 
 
 if __name__ == "__main__":

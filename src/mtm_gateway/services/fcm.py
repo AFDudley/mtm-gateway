@@ -9,7 +9,6 @@ All data values must be strings — FCM requirement.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import firebase_admin
 from firebase_admin import credentials, messaging

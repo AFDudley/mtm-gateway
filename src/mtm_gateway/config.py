@@ -28,13 +28,13 @@ TIER_THRESHOLDS: dict[str, Decimal] = {
 }
 
 TIER_CONFIGS: dict[str, TierConfig] = {
-    "free": TierConfig(signals_per_day=3, refreshes_per_day=0, wizard_follows=0, auto_execute=False),
+    "free": TierConfig(
+        signals_per_day=3, refreshes_per_day=0, wizard_follows=0, auto_execute=False
+    ),
     "starter": TierConfig(
         signals_per_day=10, refreshes_per_day=1, wizard_follows=1, auto_execute=False
     ),
-    "pro": TierConfig(
-        signals_per_day=50, refreshes_per_day=2, wizard_follows=3, auto_execute=True
-    ),
+    "pro": TierConfig(signals_per_day=50, refreshes_per_day=2, wizard_follows=3, auto_execute=True),
     "elite": TierConfig(
         signals_per_day=-1, refreshes_per_day=-1, wizard_follows=-1, auto_execute=True
     ),
@@ -60,15 +60,11 @@ class Settings:
     solana_wallet_private_key: str = field(
         default_factory=lambda: os.environ.get("SOLANA_WALLET_PRIVATE_KEY", "")
     )
-    lps_mint_address: str = field(
-        default_factory=lambda: os.environ.get("LPS_MINT_ADDRESS", "")
-    )
+    lps_mint_address: str = field(default_factory=lambda: os.environ.get("LPS_MINT_ADDRESS", ""))
 
     # Upstream
     backtest_upstream: str = field(
-        default_factory=lambda: os.environ.get(
-            "BACKTEST_UPSTREAM", "http://k-solana-backtest:8000"
-        )
+        default_factory=lambda: os.environ.get("BACKTEST_UPSTREAM", "http://k-solana-backtest:8000")
     )
 
     # x402
@@ -79,15 +75,9 @@ class Settings:
     )
 
     # Pricing (LPS)
-    signal_price: str = field(
-        default_factory=lambda: os.environ.get("SIGNAL_PRICE", "0.10")
-    )
-    refresh_price: str = field(
-        default_factory=lambda: os.environ.get("REFRESH_PRICE", "0.50")
-    )
-    receipt_price: str = field(
-        default_factory=lambda: os.environ.get("RECEIPT_PRICE", "0.05")
-    )
+    signal_price: str = field(default_factory=lambda: os.environ.get("SIGNAL_PRICE", "0.10"))
+    refresh_price: str = field(default_factory=lambda: os.environ.get("REFRESH_PRICE", "0.50"))
+    receipt_price: str = field(default_factory=lambda: os.environ.get("RECEIPT_PRICE", "0.05"))
     device_register_price: str = field(
         default_factory=lambda: os.environ.get("DEVICE_REGISTER_PRICE", "0.01")
     )
@@ -99,12 +89,8 @@ class Settings:
     )
 
     # laconicd
-    laconicd_gql: str = field(
-        default_factory=lambda: os.environ.get("LACONICD_GQL", "")
-    )
-    encryption_key: str = field(
-        default_factory=lambda: os.environ.get("ENCRYPTION_KEY", "")
-    )
+    laconicd_gql: str = field(default_factory=lambda: os.environ.get("LACONICD_GQL", ""))
+    encryption_key: str = field(default_factory=lambda: os.environ.get("ENCRYPTION_KEY", ""))
 
     # Firebase
     firebase_service_account: Path = field(
@@ -114,18 +100,12 @@ class Settings:
     )
 
     # Apple IAP (App Store Server API v2)
-    apple_key_id: str = field(
-        default_factory=lambda: os.environ.get("APPLE_KEY_ID", "")
-    )
-    apple_issuer_id: str = field(
-        default_factory=lambda: os.environ.get("APPLE_ISSUER_ID", "")
-    )
+    apple_key_id: str = field(default_factory=lambda: os.environ.get("APPLE_KEY_ID", ""))
+    apple_issuer_id: str = field(default_factory=lambda: os.environ.get("APPLE_ISSUER_ID", ""))
     apple_private_key_path: str = field(
         default_factory=lambda: os.environ.get("APPLE_PRIVATE_KEY_PATH", "/config/apple-key.p8")
     )
-    apple_bundle_id: str = field(
-        default_factory=lambda: os.environ.get("APPLE_BUNDLE_ID", "")
-    )
+    apple_bundle_id: str = field(default_factory=lambda: os.environ.get("APPLE_BUNDLE_ID", ""))
     apple_environment: str = field(
         default_factory=lambda: os.environ.get("APPLE_ENVIRONMENT", "production")
     )

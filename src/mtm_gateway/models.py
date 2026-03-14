@@ -8,10 +8,7 @@ Response shapes match what the MTM frontend expects:
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from pydantic import BaseModel
-
 
 # --- Signal models ---
 

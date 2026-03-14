@@ -68,8 +68,7 @@ def transfer_lps_to_user(
     balance = get_lps_balance(settings)
     if balance < amount:
         raise ValueError(
-            f"Insufficient LPS balance in gateway wallet: "
-            f"have {balance}, need {amount}"
+            f"Insufficient LPS balance in gateway wallet: " f"have {balance}, need {amount}"
         )
 
     client = SolanaClient(settings.solana_rpc)

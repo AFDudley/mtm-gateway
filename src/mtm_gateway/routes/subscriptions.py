@@ -116,7 +116,7 @@ async def verify_receipt(request: Request, body: VerifyReceiptRequest) -> Verify
             status_code=503,
             detail="Service temporarily unable to process purchase. Please try again later.",
         )
-    except Exception as e:
+    except Exception:
         logger.exception("LPS transfer failed for wallet=%s", wallet)
         raise HTTPException(
             status_code=500,

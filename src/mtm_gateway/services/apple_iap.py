@@ -28,9 +28,8 @@ from decimal import Decimal
 
 import jwt
 from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, padding
-from cryptography.x509.oid import ExtensionOID
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from mtm_gateway.config import Settings
 
@@ -168,8 +167,7 @@ def _verify_certificate_chain(x5c_chain: list[str]) -> None:
     root_fingerprint = root_cert.fingerprint(hashes.SHA256()).hex()
     if root_fingerprint not in APPLE_ROOT_CA_G3_FINGERPRINTS:
         raise ValueError(
-            f"Root certificate fingerprint {root_fingerprint} "
-            "does not match Apple Root CA"
+            f"Root certificate fingerprint {root_fingerprint} " "does not match Apple Root CA"
         )
 
     # Check leaf certificate validity (allow 10 min clock skew)

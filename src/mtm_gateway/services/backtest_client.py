@@ -110,11 +110,13 @@ async def _x402_fetch(
         signed_tx = await _sign_usdc_transfer(settings, pay_to, price)
 
         # Retry with payment proof
-        payment_header = json.dumps({
-            "scheme": "exact",
-            "network": "solana",
-            "payload": signed_tx,
-        })
+        payment_header = json.dumps(
+            {
+                "scheme": "exact",
+                "network": "solana",
+                "payload": signed_tx,
+            }
+        )
 
         if method == "GET":
             resp2 = await client.get(url, headers={"X-PAYMENT": payment_header})
@@ -146,11 +148,13 @@ async def _x402_fetch_binary(
         signed_tx = await _sign_usdc_transfer(
             settings, requirements["pay_to"], requirements["price"]
         )
-        payment_header = json.dumps({
-            "scheme": "exact",
-            "network": "solana",
-            "payload": signed_tx,
-        })
+        payment_header = json.dumps(
+            {
+                "scheme": "exact",
+                "network": "solana",
+                "payload": signed_tx,
+            }
+        )
 
         resp2 = await client.get(url, headers={"X-PAYMENT": payment_header})
         resp2.raise_for_status()
@@ -166,11 +170,7 @@ def _parse_payment_requirements(resp: httpx.Response) -> dict[str, str] | None:
     # Try body
     try:
         body = resp.json()
-        pay_to = (
-            body.get("accepts", {}).get("payTo")
-            or body.get("pay_to")
-            or body.get("payTo")
-        )
+        pay_to = body.get("accepts", {}).get("payTo") or body.get("pay_to") or body.get("payTo")
         price = str(
             body.get("accepts", {}).get("maxAmountRequired")
             or body.get("price")

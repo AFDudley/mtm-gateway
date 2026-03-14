@@ -17,7 +17,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Request
 
-from mtm_gateway.config import Settings, get_settings
+from mtm_gateway.config import get_settings
 from mtm_gateway.middleware.identity import extract_wallet_from_x402
 from mtm_gateway.middleware.tier import (
     check_refresh_quota,
@@ -25,7 +25,7 @@ from mtm_gateway.middleware.tier import (
     record_refresh_use,
     record_signal_use,
 )
-from mtm_gateway.models import SignalReceiptRequest, SignalState, SignalsResponse
+from mtm_gateway.models import SignalReceiptRequest, SignalsResponse, SignalState
 from mtm_gateway.services import backtest_client
 
 logger = logging.getLogger(__name__)
@@ -45,15 +45,17 @@ def _transform_signals(raw_signals: list[dict], action: str) -> list[SignalState
         strategies = entry.get("strategies_firing", [])
         token = entry.get("token", "UNKNOWN")
 
-        results.append(SignalState(
-            id=f"sig_{uuid.uuid4().hex[:12]}",
-            asset=f"${token}",
-            action=action,
-            confidence=round(n / TOTAL_STRATEGIES, 2),
-            entry=entry.get("spot_price", 0),
-            reasoning=", ".join(strategies) if strategies else "Consensus signal",
-            channelId="wizard_mtm",
-        ))
+        results.append(
+            SignalState(
+                id=f"sig_{uuid.uuid4().hex[:12]}",
+                asset=f"${token}",
+                action=action,
+                confidence=round(n / TOTAL_STRATEGIES, 2),
+                entry=entry.get("spot_price", 0),
+                reasoning=", ".join(strategies) if strategies else "Consensus signal",
+                channelId="wizard_mtm",
+            )
+        )
     return results
 
 

@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from datetime import UTC, datetime
-from decimal import Decimal
 
 from mtm_gateway.config import TIER_CONFIGS, TIER_THRESHOLDS, Settings, tier_from_spend
 from mtm_gateway.models import TierInfo
@@ -18,9 +17,7 @@ from mtm_gateway.services.solana_rpc import get_lifetime_lps_spend
 logger = logging.getLogger(__name__)
 
 # In-memory daily usage counters: {wallet: {"signals": N, "refreshes": N, "date": "YYYY-MM-DD"}}
-_daily_usage: dict[str, dict] = defaultdict(
-    lambda: {"signals": 0, "refreshes": 0, "date": ""}
-)
+_daily_usage: dict[str, dict] = defaultdict(lambda: {"signals": 0, "refreshes": 0, "date": ""})
 
 
 def _reset_if_new_day(wallet: str) -> None:

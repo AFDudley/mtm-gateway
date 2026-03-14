@@ -44,9 +44,7 @@ def create_app() -> FastAPI:
     if settings.solana_wallet_address and settings.lps_mint_address:
         _add_x402_middleware(app, settings)
     else:
-        logger.warning(
-            "SOLANA_WALLET_ADDRESS or LPS_MINT_ADDRESS not set — x402 gating DISABLED"
-        )
+        logger.warning("SOLANA_WALLET_ADDRESS or LPS_MINT_ADDRESS not set — x402 gating DISABLED")
 
     # Mount routes
     app.include_router(status.router, tags=["status"])
@@ -88,9 +86,7 @@ def _add_x402_middleware(app: FastAPI, settings: Settings) -> None:
         from x402.http.facilitator_client import HTTPFacilitatorClient
         from x402.http.middleware.fastapi import PaymentMiddlewareASGI
 
-        facilitator = HTTPFacilitatorClient(
-            config={"url": settings.x402_facilitator_url}
-        )
+        facilitator = HTTPFacilitatorClient(config={"url": settings.x402_facilitator_url})
         server = x402ResourceServer(facilitator_clients=facilitator)
 
         def _route(price: str) -> dict:

@@ -49,20 +49,22 @@ async def list_wizards(request: Request) -> dict:
             attributes={"wizardId": wizard_id},
         )
 
-        wizards.append(Wizard(
-            id=wizard_id,
-            name=record.get("name", ""),
-            handle=record.get("handle", ""),
-            avatarUrl=record.get("avatarUrl"),
-            bio=record.get("bio"),
-            winRate=record.get("winRate", 0),
-            avgReturn=record.get("avgReturn", 0),
-            signalsPerMonth=record.get("signalsPerMonth", 0),
-            followers=len(followers),
-            verified=record.get("verified", False),
-            walletAddress=record.get("walletAddress", ""),
-            createdAt=record.get("createdAt", ""),
-        ))
+        wizards.append(
+            Wizard(
+                id=wizard_id,
+                name=record.get("name", ""),
+                handle=record.get("handle", ""),
+                avatarUrl=record.get("avatarUrl"),
+                bio=record.get("bio"),
+                winRate=record.get("winRate", 0),
+                avgReturn=record.get("avgReturn", 0),
+                signalsPerMonth=record.get("signalsPerMonth", 0),
+                followers=len(followers),
+                verified=record.get("verified", False),
+                walletAddress=record.get("walletAddress", ""),
+                createdAt=record.get("createdAt", ""),
+            )
+        )
 
     return {"wizards": [w.model_dump() for w in wizards]}
 
