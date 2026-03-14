@@ -68,7 +68,7 @@ def _make_resource_config(settings: Settings, price: str) -> dict:
         scheme="exact",
         pay_to=settings.solana_wallet_address,
         price=price,
-        network="solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+        network=settings.solana_network,
     )
     return rc.model_dump()
 

@@ -942,6 +942,7 @@ dependencies = [
 test = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "x402", extra = ["svm"] },
 ]
 
 [package.metadata]
@@ -961,6 +962,7 @@ requires-dist = [
     { name = "solders", specifier = ">=0.21" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
     { name = "x402", extras = ["fastapi"], specifier = ">=2.2.0" },
+    { name = "x402", extras = ["svm"], marker = "extra == 'test'", specifier = ">=2.2.0" },
 ]
 provides-extras = ["test"]
 
@@ -1704,4 +1706,8 @@ wheels = [
 fastapi = [
     { name = "fastapi", extra = ["standard"] },
     { name = "starlette" },
+]
+svm = [
+    { name = "solana" },
+    { name = "solders" },
 ]

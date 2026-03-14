@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import httpx
 import pytest
-
-if TYPE_CHECKING:
-    from conftest import X402PayFn
+from x402.http.clients.httpx import x402HttpxClient
 
 
 @pytest.mark.asyncio
@@ -22,10 +18,10 @@ async def test_signals_buys_without_payment_returns_402(
 
 @pytest.mark.asyncio
 async def test_signals_buys_with_payment_returns_signals(
-    x402_pay: X402PayFn,
+    x402_pay: x402HttpxClient,
 ) -> None:
     """Paying for /signals/buys returns signal data."""
-    resp = await x402_pay("/signals/buys", "GET")
+    resp = await x402_pay.get("/signals/buys")
     assert resp.status_code == 200
 
     data = resp.json()
@@ -44,10 +40,10 @@ async def test_signals_buys_with_payment_returns_signals(
 
 @pytest.mark.asyncio
 async def test_signals_shorts_with_payment(
-    x402_pay: X402PayFn,
+    x402_pay: x402HttpxClient,
 ) -> None:
     """Paying for /signals/shorts returns at least one signal."""
-    resp = await x402_pay("/signals/shorts", "GET")
+    resp = await x402_pay.get("/signals/shorts")
     assert resp.status_code == 200
 
     data = resp.json()
