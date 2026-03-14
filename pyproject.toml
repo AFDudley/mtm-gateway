@@ -23,6 +23,7 @@ dependencies = [
 test = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    "x402[svm]>=2.2.0",
 ]
 
 [build-system]

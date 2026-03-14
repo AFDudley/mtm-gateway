@@ -53,6 +53,11 @@ def tier_from_spend(lifetime_spend: Decimal) -> str:
 @dataclass(frozen=True)
 class Settings:
     # Solana
+    solana_network: str = field(
+        default_factory=lambda: os.environ.get(
+            "SOLANA_NETWORK", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+        )
+    )
     solana_rpc: str = field(default_factory=lambda: os.environ.get("SOLANA_RPC", ""))
     solana_wallet_address: str = field(
         default_factory=lambda: os.environ.get("SOLANA_WALLET_ADDRESS", "")
