@@ -6,10 +6,9 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Copy dependency files first for layer caching
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 
-# Install dependencies (no lockfile yet — generate with `uv lock` before prod)
-RUN uv sync
+RUN uv sync --frozen --no-dev
 
 # Copy application code
 COPY src/ src/
