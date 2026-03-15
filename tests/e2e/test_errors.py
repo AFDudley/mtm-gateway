@@ -7,6 +7,7 @@ GATED_ENDPOINTS = [
     "/signals/buys",
     "/signals/shorts",
     "/subscriptions/status",
+    "/devices/unregister",
 ]
 
 FREE_ENDPOINTS = [

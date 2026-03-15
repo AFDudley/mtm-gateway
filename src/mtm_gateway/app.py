@@ -105,6 +105,7 @@ def _add_x402_middleware(app: FastAPI, settings: Settings) -> None:
             "/signals/refresh": _route(settings.refresh_price),
             "/signals/receipt": _route(settings.receipt_price),
             "/devices/register": _route(settings.device_register_price),
+            "/devices/unregister": _route(settings.device_register_price),
             "/wizards/{wizard_id}/follow": _route(settings.wizard_follow_price),
             "/wizards/{wizard_id}/signal": _route(settings.wizard_signal_price),
             "/subscriptions/status": _route(settings.signal_price),
