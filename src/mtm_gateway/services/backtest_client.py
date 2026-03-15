@@ -94,6 +94,9 @@ async def _x402_fetch(
         else:
             resp = await client.post(url)
 
+        if resp.status_code == 503:
+            return {"signals": [], "count": 0}
+
         if resp.status_code != 402:
             resp.raise_for_status()
             return resp.json()

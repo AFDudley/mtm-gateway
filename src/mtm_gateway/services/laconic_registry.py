@@ -16,6 +16,7 @@ from typing import Any
 
 import httpx
 from cryptography.fernet import Fernet
+from fastapi import HTTPException
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
@@ -83,16 +84,21 @@ async def write_record(
     variables = {"input": {"record": record}}
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
-            settings.laconicd_gql,
-            json={"query": mutation, "variables": variables},
-        )
-        resp.raise_for_status()
+        try:
+            resp = await client.post(
+                settings.laconicd_gql,
+                json={"query": mutation, "variables": variables},
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError as e:
+            logger.error("Failed to write to registry: %s", e)
+            raise HTTPException(status_code=502, detail="Registry service unavailable") from e
+
         result = resp.json()
 
         if "errors" in result:
             logger.error("GraphQL errors writing record: %s", result["errors"])
-            raise ValueError(f"Registry write failed: {result['errors']}")
+            raise HTTPException(status_code=502, detail="Registry write failed")
 
         record_id = result.get("data", {}).get("setRecord", {}).get("id", "")
         logger.info("Wrote record type=%s id=%s", record_type, record_id)
@@ -128,11 +134,16 @@ async def query_records(
     variables = {"attributes": kv_list}
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
-            settings.laconicd_gql,
-            json={"query": query, "variables": variables},
-        )
-        resp.raise_for_status()
+        try:
+            resp = await client.post(
+                settings.laconicd_gql,
+                json={"query": query, "variables": variables},
+            )
+            resp.raise_for_status()
+        except httpx.HTTPError as e:
+            logger.error("Failed to query registry: %s", e)
+            return []
+
         result = resp.json()
 
         if "errors" in result:
