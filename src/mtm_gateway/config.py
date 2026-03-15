@@ -93,8 +93,11 @@ class Settings:
         default_factory=lambda: os.environ.get("WIZARD_SIGNAL_PRICE", "2.00")
     )
 
-    # laconicd
+    # laconicd — see services/laconic_registry.py for read/write architecture
     laconicd_gql: str = field(default_factory=lambda: os.environ.get("LACONICD_GQL", ""))
+    registry_writer_url: str = field(
+        default_factory=lambda: os.environ.get("REGISTRY_WRITER_URL", "")
+    )
     encryption_key: str = field(default_factory=lambda: os.environ.get("ENCRYPTION_KEY", ""))
 
     # Firebase

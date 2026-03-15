@@ -1,10 +1,36 @@
 """laconicd registry client for encrypted record storage.
 
-Records are stored in laconicd's on-chain registry via GraphQL.
-Sensitive fields are AES-encrypted application-side before writing.
-The ENCRYPTION_KEY is symmetric, generated at deploy time.
-
-Registry has no built-in encryption — all privacy is at the application layer.
+# Architecture: read and write paths are separate
+#
+# laconicd is a Cosmos SDK chain. Its GQL endpoint (LACONICD_GQL) is a
+# read-side indexer that watches committed blocks and projects on-chain
+# state into a queryable API. It does NOT support mutations.
+#
+# Writes go through the consensus layer: the gateway POSTs to a
+# registry-writer sidecar (REGISTRY_WRITER_URL) which uses the
+# @cerc-io/registry-sdk to sign and broadcast MsgSetRecord transactions
+# to laconicd's Tendermint RPC. The sidecar owns the cosmos signing key,
+# bond, and gas config. The gateway just sends JSON and gets back a
+# record ID.
+#
+# Read path:  gateway → GQL indexer (http://laconicd:9473/api)
+# Write path: gateway → registry-writer sidecar → Tendermint RPC
+#
+# The writer gets a receipt from the validator immediately on broadcast
+# (tx hash + record ID in MsgSetRecordResponse), so the gateway knows
+# the write succeeded without polling. Other readers querying GQL won't
+# see the record until the indexer catches up to that block (~6s).
+#
+# GQL query notes:
+#   - Variables use ValueInput wrappers: {key: k, value: {string: v}}
+#   - Must pass all:true to include unnamed records (no authority name)
+#   - The value field is a union type; use aliases to avoid conflicts:
+#     ... on StringValue { string: value }
+#     ... on IntValue { int: value }
+#
+# Encryption is application-layer. laconicd has no built-in encryption.
+# Sensitive fields are AES-encrypted (Fernet) before storage. The
+# ENCRYPTION_KEY is symmetric, generated at deploy time.
 """
 
 from __future__ import annotations
@@ -58,42 +84,29 @@ async def write_record(
     attributes: dict[str, str],
     encrypted_data: dict | None = None,
 ) -> str:
-    """Write a record to laconicd registry.
+    """Write a record to laconicd via the registry-writer sidecar.
 
     Attributes are stored in plaintext (queryable).
     encrypted_data is AES-encrypted before storage.
 
     Returns the record ID.
     """
-    if not settings.laconicd_gql:
-        raise HTTPException(status_code=503, detail="LACONICD_GQL not configured")
+    if not settings.registry_writer_url:
+        raise HTTPException(status_code=503, detail="REGISTRY_WRITER_URL not configured")
 
     if encrypted_data and not settings.encryption_key:
         raise HTTPException(status_code=503, detail="ENCRYPTION_KEY not configured")
 
-    record = {
-        "type": record_type,
-        "attributes": attributes,
-    }
+    record: dict[str, str] = {"type": record_type, **attributes}
 
     if encrypted_data and settings.encryption_key:
         record["encryptedPayload"] = _encrypt(encrypted_data, settings.encryption_key)
 
-    mutation = """
-    mutation SetRecord($input: SetRecordInput!) {
-        setRecord(input: $input) {
-            id
-        }
-    }
-    """
-
-    variables = {"input": {"record": record}}
-
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             resp = await client.post(
-                settings.laconicd_gql,
-                json={"query": mutation, "variables": variables},
+                f"{settings.registry_writer_url}/records",
+                json={"record": record},
             )
             resp.raise_for_status()
         except httpx.HTTPError as e:
@@ -101,12 +114,7 @@ async def write_record(
             raise HTTPException(status_code=502, detail="Registry service unavailable") from e
 
         result = resp.json()
-
-        if "errors" in result:
-            logger.error("GraphQL errors writing record: %s", result["errors"])
-            raise HTTPException(status_code=502, detail="Registry write failed")
-
-        record_id = result.get("data", {}).get("setRecord", {}).get("id", "")
+        record_id = result.get("id", "")
         logger.info("Wrote record type=%s id=%s", record_type, record_id)
         return record_id
 
@@ -205,24 +213,17 @@ async def delete_records(
     settings: Settings,
     record_ids: list[str],
 ) -> None:
-    """Delete records from laconicd registry by ID."""
-    mutation = """
-    mutation DeleteRecord($id: String!) {
-        deleteRecord(id: $id) {
-            success
-        }
-    }
-    """
+    """Delete records from laconicd via the registry-writer sidecar."""
+    if not settings.registry_writer_url:
+        raise HTTPException(status_code=503, detail="REGISTRY_WRITER_URL not configured")
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         for record_id in record_ids:
-            resp = await client.post(
-                settings.laconicd_gql,
-                json={"query": mutation, "variables": {"id": record_id}},
-            )
-            if resp.status_code == 200:
-                result = resp.json()
-                if "errors" in result:
-                    logger.error("Failed to delete record %s: %s", record_id, result["errors"])
-                else:
-                    logger.info("Deleted record %s", record_id)
+            try:
+                resp = await client.delete(
+                    f"{settings.registry_writer_url}/records/{record_id}",
+                )
+                resp.raise_for_status()
+                logger.info("Deleted record %s", record_id)
+            except httpx.HTTPError as e:
+                logger.error("Failed to delete record %s: %s", record_id, e)
