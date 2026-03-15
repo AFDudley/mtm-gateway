@@ -30,6 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]  # gateway/tests/e2e/vm_fixture.
 
 # Default QCOW2 image path — override with MTM_VM_IMAGE env var
 DEFAULT_IMAGE = REPO_ROOT / "packer" / "output" / "mtm-fixturenet.qcow2"
+SSH_KEY = REPO_ROOT / "packer" / "e2e-ssh-key"
 
 # Ports the stack exposes (must match compose port declarations)
 PORTS = {
@@ -74,11 +75,28 @@ def _keypair_to_base58(kp: Keypair) -> str:
     return result
 
 
-def _detect_accel() -> str:
-    """Detect QEMU acceleration: KVM on Linux, TCG on macOS."""
-    if platform.system() == "Linux" and Path("/dev/kvm").exists():
-        return "kvm"
-    return "tcg"
+def _detect_qemu() -> tuple[str, str, list[str]]:
+    """Detect QEMU binary, accelerator, and extra args for the current platform.
+
+    Returns (binary, accel, extra_args).
+    """
+    import struct
+
+    is_arm = struct.calcsize("P") == 8 and platform.machine() in ("arm64", "aarch64")
+    system = platform.system()
+
+    if is_arm and system == "Darwin":
+        # macOS Apple Silicon — ARM64 VM with HVF
+        return (
+            "qemu-system-aarch64",
+            "hvf",
+            ["-M", "virt", "-cpu", "host",
+             "-bios", "/opt/local/share/qemu/edk2-aarch64-code.fd"],
+        )
+    elif system == "Linux" and Path("/dev/kvm").exists():
+        return ("qemu-system-x86_64", "kvm", ["-cpu", "host"])
+    else:
+        return ("qemu-system-x86_64", "tcg", [])
 
 
 def _wait_for_ssh(port: int, timeout: int = 120) -> None:
@@ -87,7 +105,8 @@ def _wait_for_ssh(port: int, timeout: int = 120) -> None:
     while time.monotonic() < deadline:
         try:
             result = subprocess.run(
-                ["ssh", "-p", str(port), "-o", "StrictHostKeyChecking=no",
+                ["ssh", "-p", str(port), "-i", str(SSH_KEY),
+                 "-o", "StrictHostKeyChecking=no",
                  "-o", "ConnectTimeout=3", "-o", "BatchMode=yes",
                  "mtm@localhost", "true"],
                 capture_output=True, timeout=5,
@@ -103,7 +122,8 @@ def _wait_for_ssh(port: int, timeout: int = 120) -> None:
 def _ssh_run(port: int, cmd: str, check: bool = True) -> subprocess.CompletedProcess:
     """Run a command in the VM via SSH."""
     return subprocess.run(
-        ["ssh", "-p", str(port), "-o", "StrictHostKeyChecking=no",
+        ["ssh", "-p", str(port), "-i", str(SSH_KEY),
+         "-o", "StrictHostKeyChecking=no",
          "-o", "BatchMode=yes", "mtm@localhost", cmd],
         capture_output=True, text=True, timeout=300, check=check,
     )
@@ -112,7 +132,8 @@ def _ssh_run(port: int, cmd: str, check: bool = True) -> subprocess.CompletedPro
 def _scp_to(port: int, local_path: str, remote_path: str) -> None:
     """Copy a file into the VM."""
     subprocess.run(
-        ["scp", "-P", str(port), "-o", "StrictHostKeyChecking=no",
+        ["scp", "-P", str(port), "-i", str(SSH_KEY),
+         "-o", "StrictHostKeyChecking=no",
          local_path, f"mtm@localhost:{remote_path}"],
         check=True, capture_output=True, timeout=30,
     )
@@ -159,12 +180,13 @@ def start_stack() -> tuple[subprocess.Popen, StackInfo]:
         hostfwd.append(f"hostfwd=tcp::{port}-:{port}")
     netdev = f"user,id=net0,{','.join(hostfwd)}"
 
-    accel = _detect_accel()
-    logger.info("Starting QEMU (accel=%s, image=%s)", accel, image_path)
+    qemu_bin, accel, extra_args = _detect_qemu()
+    logger.info("Starting QEMU (bin=%s, accel=%s, image=%s)", qemu_bin, accel, image_path)
 
     qemu_cmd = [
-        "qemu-system-x86_64",
+        qemu_bin,
         "-accel", accel,
+        *extra_args,
         "-m", VM_MEMORY,
         "-smp", VM_CPUS,
         "-drive", f"file={snapshot},format=qcow2",
