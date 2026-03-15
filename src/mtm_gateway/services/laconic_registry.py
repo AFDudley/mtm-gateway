@@ -65,6 +65,12 @@ async def write_record(
 
     Returns the record ID.
     """
+    if not settings.laconicd_gql:
+        raise HTTPException(status_code=503, detail="LACONICD_GQL not configured")
+
+    if encrypted_data and not settings.encryption_key:
+        raise HTTPException(status_code=503, detail="ENCRYPTION_KEY not configured")
+
     record = {
         "type": record_type,
         "attributes": attributes,
@@ -114,6 +120,9 @@ async def query_records(
 
     Decrypts encrypted payloads and merges into the returned dicts.
     """
+    if not settings.laconicd_gql:
+        raise HTTPException(status_code=503, detail="LACONICD_GQL not configured")
+
     # Build attribute filter
     attr_filter = {**attributes, "type": record_type}
 
