@@ -128,18 +128,22 @@ async def query_records(
 
     query = """
     query QueryRecords($attributes: [KeyValueInput!]) {
-        queryRecords(attributes: $attributes) {
+        queryRecords(attributes: $attributes, all: true) {
             id
             attributes {
                 key
-                value
+                value {
+                    ... on StringValue { string: value }
+                    ... on IntValue { int: value }
+                    ... on FloatValue { float: value }
+                    ... on BooleanValue { boolean: value }
+                }
             }
-            encryptedPayload
         }
     }
     """
 
-    kv_list = [{"key": k, "value": v} for k, v in attr_filter.items()]
+    kv_list = [{"key": k, "value": {"string": v}} for k, v in attr_filter.items()]
     variables = {"attributes": kv_list}
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -165,12 +169,26 @@ async def query_records(
     for record in records:
         entry: dict[str, Any] = {"id": record["id"]}
 
-        # Flatten attributes
+        # Flatten attributes — value is a union type with aliases:
+        # StringValue→string, IntValue→int, FloatValue→float, BooleanValue→boolean
         for attr in record.get("attributes", []):
-            entry[attr["key"]] = attr["value"]
+            val = attr["value"]
+            if isinstance(val, dict):
+                # Extract whichever alias is non-null
+                entry[attr["key"]] = (
+                    val.get("string")
+                    if val.get("string") is not None
+                    else val.get("int")
+                    if val.get("int") is not None
+                    else val.get("float")
+                    if val.get("float") is not None
+                    else val.get("boolean")
+                )
+            else:
+                entry[attr["key"]] = val
 
-        # Decrypt payload if present
-        payload = record.get("encryptedPayload")
+        # Decrypt payload if present (stored as a regular attribute)
+        payload = entry.pop("encryptedPayload", None)
         if payload and settings.encryption_key:
             try:
                 decrypted = _decrypt(payload, settings.encryption_key)
