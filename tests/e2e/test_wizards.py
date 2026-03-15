@@ -16,12 +16,11 @@ async def test_list_wizards(client: httpx.AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_follow_wizard(x402_pay: x402HttpxClient) -> None:
-    # Get a wizard id from the list first
+    # Get a wizard id from the list — test environment must have seed data
     list_resp = await x402_pay.get("/wizards")
     assert list_resp.status_code == 200
     wizards = list_resp.json()["wizards"]
-    if not wizards:
-        pytest.skip("No wizards in registry — skipping follow test")
+    assert len(wizards) > 0, "No wizards in registry — seed data missing from test environment"
 
     wizard_id = wizards[0]["id"]
     resp = await x402_pay.post(f"/wizards/{wizard_id}/follow")
@@ -32,14 +31,15 @@ async def test_follow_wizard(x402_pay: x402HttpxClient) -> None:
 
 @pytest.mark.asyncio
 async def test_unfollow_wizard(x402_pay: x402HttpxClient) -> None:
-    # Get a wizard id from the list first
+    # Follow first, then unfollow — test environment must have seed data
     list_resp = await x402_pay.get("/wizards")
     assert list_resp.status_code == 200
     wizards = list_resp.json()["wizards"]
-    if not wizards:
-        pytest.skip("No wizards in registry — skipping unfollow test")
+    assert len(wizards) > 0, "No wizards in registry — seed data missing from test environment"
 
     wizard_id = wizards[0]["id"]
+    # Ensure followed before unfollowing
+    await x402_pay.post(f"/wizards/{wizard_id}/follow")
     resp = await x402_pay.delete(f"/wizards/{wizard_id}/follow")
     assert resp.status_code == 200
     data = resp.json()

@@ -38,9 +38,8 @@ def laconicd_gql() -> str:
 
 @pytest.fixture(scope="session")
 def test_wallet_key() -> str:
-    key = os.environ.get("TEST_WALLET_KEY")
-    if not key:
-        pytest.skip("TEST_WALLET_KEY not set")
+    key = os.environ.get("TEST_WALLET_KEY", "")
+    assert key, "TEST_WALLET_KEY must be set to run E2E tests"
     return key
 
 

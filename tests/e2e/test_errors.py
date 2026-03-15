@@ -27,6 +27,4 @@ async def test_gated_endpoints_return_402(client: httpx.AsyncClient) -> None:
 async def test_free_endpoints_return_200(client: httpx.AsyncClient) -> None:
     for path in FREE_ENDPOINTS:
         resp = await client.get(path)
-        assert resp.status_code in (200, 503), (
-            f"{path} returned {resp.status_code}, expected 200 or 503"
-        )
+        assert resp.status_code == 200, f"{path} returned {resp.status_code}, expected 200"
