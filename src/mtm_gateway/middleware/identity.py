@@ -18,15 +18,39 @@ logger = logging.getLogger(__name__)
 
 
 def extract_wallet_from_x402(request: Request) -> str | None:
-    """Extract the payer's Solana wallet address from the x402 payment header.
+    """Extract the payer's Solana wallet address from verified x402 payment.
 
-    The X-PAYMENT header contains JSON: {"scheme": "exact", "network": "solana", "payload": "<base64 tx>"}
-    The payload is a base64-encoded signed Solana transaction. The first signer
-    is the payer.
+    Checks two sources in order:
+    1. request.state.payment_payload — set by PaymentMiddlewareASGI after
+       successful verification via the facilitator.
+    2. X-PAYMENT header — parsed directly as a fallback.
 
-    Returns the base58 wallet address, or None if no payment header present.
+    Returns the base58 wallet address, or None if no payment present.
     """
-    payment_header = request.headers.get("X-PAYMENT")
+    # Source 1: middleware-verified payment payload (preferred)
+    payment_payload = getattr(request.state, "payment_payload", None)
+    if payment_payload is not None:
+        try:
+            # PaymentPayload has a 'payload' field containing the inner dict
+            # which includes the signed transaction
+            inner = payment_payload
+            if hasattr(inner, "payload"):
+                inner = inner.payload
+            if isinstance(inner, dict):
+                tx_data = inner.get("transaction") or inner.get("payload", "")
+            else:
+                tx_data = str(inner)
+
+            if tx_data:
+                tx_bytes = base64.b64decode(tx_data)
+                tx = VersionedTransaction.from_bytes(tx_bytes)
+                if tx.message.account_keys:
+                    return str(tx.message.account_keys[0])
+        except Exception:
+            logger.debug("Could not extract wallet from payment_payload, trying header")
+
+    # Source 2: raw X-PAYMENT header
+    payment_header = request.headers.get("X-PAYMENT") or request.headers.get("payment-signature")
     if not payment_header:
         return None
 
@@ -39,7 +63,6 @@ def extract_wallet_from_x402(request: Request) -> str | None:
         tx_bytes = base64.b64decode(payload_b64)
         tx = VersionedTransaction.from_bytes(tx_bytes)
 
-        # The first signer is the fee payer / transaction initiator
         if tx.message.account_keys:
             payer = tx.message.account_keys[0]
             return str(payer)

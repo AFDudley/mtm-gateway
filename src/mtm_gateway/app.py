@@ -59,15 +59,20 @@ def create_app() -> FastAPI:
 def _make_resource_config(settings: Settings, price: str) -> dict:
     """Build an x402 ResourceConfig for an LPS-gated endpoint.
 
-    Uses the 'exact' scheme on Solana mainnet, paying to the service wallet
-    in the LPS SPL token.
+    Uses the 'exact' scheme paying to the service wallet in the LPS SPL token.
+    Price is specified as a decimal string (e.g. "0.10") which gets converted
+    to smallest-unit amount using 6 decimal places.
     """
     from x402 import ResourceConfig
+    from x402.schemas.base import AssetAmount
+
+    # Convert price (e.g. "0.10") to smallest-unit integer string (6 decimals)
+    amount = str(int(float(price) * 1_000_000))
 
     rc = ResourceConfig(
         scheme="exact",
-        pay_to=settings.solana_wallet_address,
-        price=price,
+        payTo=settings.solana_wallet_address,
+        price=AssetAmount(amount=amount, asset=settings.lps_mint_address),
         network=settings.solana_network,
     )
     return rc.model_dump()
@@ -85,9 +90,11 @@ def _add_x402_middleware(app: FastAPI, settings: Settings) -> None:
         from x402 import x402ResourceServer
         from x402.http.facilitator_client import HTTPFacilitatorClient
         from x402.http.middleware.fastapi import PaymentMiddlewareASGI
+        from x402.mechanisms.svm.exact import ExactSvmServerScheme
 
         facilitator = HTTPFacilitatorClient(config={"url": settings.x402_facilitator_url})
         server = x402ResourceServer(facilitator_clients=facilitator)
+        server.register(settings.solana_network, ExactSvmServerScheme())
 
         def _route(price: str) -> dict:
             return {"accepts": [_make_resource_config(settings, price)], "extensions": {}}

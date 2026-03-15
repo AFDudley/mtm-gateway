@@ -80,7 +80,7 @@ async def x402_pay(
     scheme = ExactSvmScheme(signer=signer, rpc_url=solana_rpc)
 
     x402_client = x402Client()
-    x402_client.register([solana_network], scheme)
+    x402_client.register(solana_network, scheme)
 
     async with x402HttpxClient(
         x402_client, base_url=gateway_url, timeout=30.0
