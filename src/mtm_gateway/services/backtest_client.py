@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import os
 from typing import Any
 
 import httpx
@@ -27,8 +28,8 @@ from mtm_gateway.services.spl_instructions import (
 
 logger = logging.getLogger(__name__)
 
-# USDC on Solana mainnet
-USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+# USDC mint — defaults to mainnet, overridden by LPS_MINT_ADDRESS for fixturenet
+USDC_MINT = os.environ.get("LPS_MINT_ADDRESS", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 
 REQUEST_TIMEOUT = 30.0
 
@@ -49,8 +50,8 @@ async def _sign_usdc_transfer(
     source_ata = get_associated_token_address(keypair.pubkey(), mint)
     dest_ata = get_associated_token_address(recipient, mint)
 
-    # USDC has 6 decimals
-    amount = int(float(amount_str) * 1_000_000)
+    # amount_str is already in smallest units (base units with 6 decimals)
+    amount = int(amount_str)
 
     ix = transfer_checked(
         source=source_ata,
@@ -184,7 +185,7 @@ def _parse_payment_requirements(resp: httpx.Response) -> dict[str, str] | None:
     except Exception:
         pass
 
-    # Try header
+    # Try X-Payment-Requirements header
     header = resp.headers.get("X-Payment-Requirements")
     if header:
         try:
@@ -193,6 +194,21 @@ def _parse_payment_requirements(resp: httpx.Response) -> dict[str, str] | None:
             price = str(req.get("maxAmountRequired") or req.get("price"))
             if pay_to and price:
                 return {"pay_to": pay_to, "price": price}
+        except Exception:
+            pass
+
+    # Try Payment-Required header (x402 v2 format, base64 encoded)
+    pr_header = resp.headers.get("Payment-Required")
+    if pr_header:
+        try:
+            decoded = json.loads(base64.b64decode(pr_header))
+            accepts = decoded.get("accepts", [])
+            if accepts:
+                first = accepts[0]
+                pay_to = first.get("payTo")
+                price = str(first.get("amount", "0"))
+                if pay_to and price:
+                    return {"pay_to": pay_to, "price": price}
         except Exception:
             pass
 
