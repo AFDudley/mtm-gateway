@@ -16,7 +16,7 @@ dependencies = [
     "apscheduler>=3.10",
     "cryptography>=42.0",
     "PyJWT>=2.8",
-    "x402[fastapi]>=2.2.0",
+    "x402[fastapi,svm]>=2.2.0",
 ]
 
 [project.optional-dependencies]
